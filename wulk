@@ -1,0 +1,88 @@
+#! /usr/bin/env python3
+"""
+Simple script to set the status of Slack to working remotely
+if not working from the office IP.
+"""
+
+import os
+import subprocess
+import requests
+import json
+
+
+def get_remote_ip():
+    result = subprocess.run(
+       ['dig',
+        'myip.opendns.com',
+        '@resolver1.opendns.com',
+        '+short'],
+       stdout=subprocess.PIPE, check=True)
+    remote_ip = result.stdout.decode('utf-8').rstrip('\n')
+    return remote_ip
+
+
+def parse_configuration(content):
+    configuration = []
+    for line in content:
+        workspace, ips, token = line.split(' ')
+        ips = ips.split(',')
+        configuration.append({
+            'workspace': workspace,
+            'ips': ips,
+            'token': token
+        })
+    return configuration
+
+
+def get_configuration():
+    config_path = os.path.expanduser('~/.slack')
+    with open(config_path, mode='r') as fd:
+        content = fd.readlines()
+    configuration = parse_configuration(content)
+    return configuration
+
+
+def get_statusses(remote_ip, configuration):
+    remotely = (':house_with_garden:', 'Working remotely',)
+    blank = ('', '',)
+
+    for item in configuration:
+        ws = item['workspace']
+        ips = item['ips']
+        token = item['token']
+
+        status = blank
+        if remote_ip in ips:
+            status = remotely
+        yield (token, ws, status)
+
+
+def change_status(status_config):
+    token = status_config[0]
+    ws = status_config[1]
+    status_emoji, status_text = status_config[2]
+    profile = {'status_text': status_text,
+               'status_emoji': status_emoji}
+
+    print('Changing the status of {} to {}'.format(ws, status_text))
+
+    r = requests.post(
+        url='https://slack.com/api/users.profile.set',
+        headers={"Authorization": "Bearer {}".format(token),
+                 'Content-Charset': 'utf-8'},
+        data={
+            'token': token,
+            'profile': json.dumps(profile)}
+        )
+    r.raise_for_status()
+
+
+def main():
+    configuration = get_configuration()
+    remote_ip = get_remote_ip()
+    for status_config in get_statusses(remote_ip, configuration):
+        change_status(status_config)
+
+
+if __name__ == '__main__':
+    main()
