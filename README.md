@@ -7,7 +7,7 @@ Not actively maintained and poor quality. 😄
 
 ## Setup
 
-**~/.slack***
+**~/.slack**
 Line contains workspace name. IPs and [API token](https://api.slack.com/custom-integrations/legacy-tokens).
 
 ```
