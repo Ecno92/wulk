@@ -3,7 +3,6 @@
 Simple script to set the status of Slack to working remotely
 if not working from the office IP.
 """
-
 import os
 import subprocess
 import requests
@@ -52,7 +51,7 @@ def get_statusses(remote_ip, configuration):
         token = item['token']
 
         status = blank
-        if remote_ip in ips:
+        if remote_ip not in ips:
             status = remotely
         yield (token, ws, status)
 
